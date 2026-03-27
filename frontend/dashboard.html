@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>X佬工作室 - 核心控制台</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&amp;family=Noto+Sans+SC:wght@300;400;500;700&amp;display=swap" rel="stylesheet">
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0B0E14; --bg-surface: rgba(20, 24, 34, 0.65);
+            --primary: #6366f1; --secondary: #8b5cf6;
+            --text-main: #f8fafc; --text-muted: #94a3b8; --text-dim: #64748b;
+            --border: rgba(255, 255, 255, 0.08); 
+            --success: #10b981; --danger: #ef4444; --warning: #f59e0b;
+            --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px;
+            --font-main: 'Outfit', 'Noto Sans SC', sans-serif;
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: var(--bg-base); background-image: radial-gradient(ellipse at 15% 0%, rgba(99, 102, 241, 0.12) 0%, transparent 40%), radial-gradient(ellipse at 85% 100%, rgba(139, 92, 246, 0.12) 0%, transparent 40%); background-attachment: fixed; color: var(--text-main); font-family: var(--font-main); line-height: 1.5; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; } ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem; }
+        .top-navbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+        h1 { margin: 0; font-size: 1.6rem; font-weight: 900; letter-spacing: 1px; }
+        .gradient-text { background: linear-gradient(135deg, #fceabb, #f8b500); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .btn-logout { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); padding: 0.5rem 1rem; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .layout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; align-items: start; }
+        .stacked-cards { display: flex; flex-direction: column; gap: 1.5rem; }
+        .card { background: var(--bg-surface); backdrop-filter: blur(20px); border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-md); padding: 1.5rem; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 0.8rem; margin-bottom: 1.2rem; }
+        .card h3 { margin: 0; font-size: 1.1rem; color: var(--text-main); font-weight: 600; }
+        .input-group { display: flex; gap: 0.8rem; margin-bottom: 1rem; flex-wrap: wrap; }
+        input, select { background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-main); font-family: inherit; font-size: 0.9rem; padding: 0.6rem 0.9rem; outline: none; width: 100%; transition: all 0.2s;}
+        input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: #fff; font-weight: 600; padding: 0.6rem 1.2rem; border: none; border-radius: var(--radius-sm); cursor: pointer; font-size: 0.9rem; transition: all 0.2s; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25); white-space: nowrap; }
+        .btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
+        .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25); padding: 0.4rem 0.8rem; font-size: 0.8rem;}
+        .btn-success { background: linear-gradient(135deg, #10b981, #059669); padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+        .table-responsive { overflow-x: auto; border-radius: var(--radius-md); border: 1px solid var(--border); background: rgba(0, 0, 0, 0.15); }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 0.8rem 1rem; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+        th { color: var(--text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; background: rgba(0, 0, 0, 0.2); white-space: nowrap;}
+        tbody tr:hover { background-color: rgba(255, 255, 255, 0.03); }
+        .badge { display: inline-flex; align-items: center; padding: 0.25rem 0.65rem; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+        .badge.pending { background: rgba(245, 158, 11, 0.12); color: #fcd34d; }
+        .badge.success { background: rgba(16, 185, 129, 0.12); color: #6ee7b7; }
+        .badge.failed { background: rgba(239, 68, 68, 0.12); color: #fca5a5; }
+        .badge.default { background: rgba(255, 255, 255, 0.05); color: var(--text-muted); }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-card { background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem; text-align: center; }
+        .stat-title { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.4rem; }
+        .stat-value { font-size: 1.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .val-total { color: var(--text-main); } .val-pending { color: var(--warning); } .val-success { color: var(--success); } .val-danger { color: var(--danger); }
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        @keyframes slideIn { from { transform: translateX(120%); opacity: 0;} to { transform: translateX(0); opacity: 1;} }
+
+        .ql-toolbar { background: rgba(255,255,255,0.05); border-color: var(--border) !important; border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+        .ql-container { border-color: var(--border) !important; border-radius: 0 0 var(--radius-sm) var(--radius-sm); font-family: inherit; font-size: 0.95rem; background: rgba(0,0,0,0.2); min-height: 180px; }
+        .ql-stroke { stroke: #cbd5e1 !important; }
+        .ql-fill { fill: #cbd5e1 !important; }
+        .ql-picker { color: #cbd5e1 !important; }
+        .ql-editor.ql-blank::before { color: rgba(255,255,255,0.3); font-style: normal; }
+        .ql-picker-options { background: #1e293b !important; border: 1px solid var(--border) !important; box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important; }
+        .ql-picker-item { color: #cbd5e1 !important; }
+        .ql-picker-item:hover, .ql-picker-item.ql-selected { color: #818cf8 !important; }
+        .ql-tooltip { background: #1e293b !important; border: 1px solid var(--border) !important; color: #fff !important; box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important; }
+        .ql-tooltip input[type="text"] { background: rgba(0,0,0,0.3) !important; color: #fff !important; border: 1px solid var(--border) !important; }
+
+        .cdkey-view-tabs { display: flex; gap: 10px; }
+        .cdkey-view-tab { padding: 4px 12px; font-size: 0.8rem; border-radius: 6px; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--text-muted); transition: all 0.2s; font-weight: 600;}
+        .cdkey-view-tab.active { background: rgba(99, 102, 241, 0.15); color: #818cf8; border-color: rgba(99, 102, 241, 0.3); }
+        details.cdkey-group { background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; overflow: hidden; }
+        details.cdkey-group summary { padding: 10px 15px; cursor: pointer; font-weight: 600; color: var(--text-main); display: flex; justify-content: space-between; align-items: center; outline: none; user-select: none; }
+        details.cdkey-group summary:hover { background: rgba(255,255,255,0.02); }
+        details.cdkey-group .group-content { padding: 0; border-top: 1px solid var(--border); background: rgba(0,0,0,0.1); border-radius: 0 0 8px 8px; }
+        .group-count-badge { background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="top-navbar">
+            <h1><span class="gradient-text">👑 X佬工作室 - 核心控制台</span></h1>
+            <button onclick="logout()" class="btn-logout">🚪 安全退出</button>
+        </header>
+
+        <div class="layout-grid">
+            <div class="stacked-cards">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>🔑 代理卡密池管理</h3>
+                        <div class="cdkey-view-tabs">
+                            <button class="cdkey-view-tab active" onclick="setCdkeyView('overview', this)">所有卡密总览</button>
+                            <button class="cdkey-view-tab" onclick="setCdkeyView('grouped', this)">余量分类视图</button>
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <input type="text" id="search-cdkey" placeholder="🔍 输入卡密关键字实时搜索..." oninput="filterCdkeys()" style="background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.3);">
+                    </div>
+                    
+                    <div class="input-group">
+                        <input type="text" id="new-cdkey" placeholder="自定义卡密(留空随机)" style="flex: 2; min-width: 150px;">
+                        <input type="number" id="new-usage" placeholder="单卡额度" style="flex: 1; min-width: 80px;" min="1" value="10">
+                        <input type="number" id="new-count" placeholder="生成数量" style="flex: 1; min-width: 80px;" min="1" value="1">
+                        <button onclick="addCdkey(event)" class="btn" style="flex: 1; min-width: 100px;">✨ 生成发放</button>
+                    </div>
+
+                    <div id="cdkey-container" class="table-responsive" style="max-height: 350px; overflow-y: auto; border: none; background: transparent;">
+                        <div style="text-align:center; padding: 2rem; color:var(--text-muted);">加载中...</div>
+                    </div>
+                </div>
+
+                <div class="card" id="upstream-card">
+                    <div class="card-header">
+                        <h3>🔗 底层上游 API 资产管理</h3>
+                        <span id="upstream-balance" style="color:#6ee7b7; font-weight:bold; font-size:0.9rem; background: rgba(16, 185, 129, 0.15); padding: 4px 10px; border-radius: 6px;">余额查询中...</span>
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="new-upstream-cdkey" placeholder="输入从官方购买的真实卡密">
+                        <button onclick="addUpstreamCdkey()" class="btn" style="background: linear-gradient(135deg, #10b981, #059669);">➕ 导入</button>
+                    </div>
+                    <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                        <table>
+                            <thead><tr><th>上游真实卡密</th><th>状态</th><th style="text-align:center;">操作</th></tr></thead>
+                            <tbody id="upstream-tbody"><tr><td colspan="3" style="text-align:center;">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stacked-cards">
+                <div class="card" id="ann-management-card">
+                    <div class="card-header">
+                        <h3>📢 全局公告管理中心</h3>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 4px;">同步至C端</span>
+                    </div>
+                    <div class="input-group">
+                        <select id="ann-type" style="width: 140px;">
+                            <option value="warning">⚠️ 警告 (黄)</option>
+                            <option value="danger">🚨 危险 (红)</option>
+                            <option value="info">📢 说明 (蓝)</option>
+                        </select>
+                        <input type="text" id="ann-title" placeholder="公告标题">
+                    </div>
+                    <div id="editor-container"></div>
+                    
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button id="btn-publish-ann" onclick="publishAnnouncement(event)" class="btn" style="flex: 1;">🚀 立即发布</button>
+                        <button id="btn-cancel-ann" onclick="cancelEditAnn()" class="btn btn-danger" style="display: none; padding: 0.6rem 1.2rem;">❌ 取消编辑</button>
+                    </div>
+                    
+                    <h4 style="margin: 20px 0 10px; font-size: 0.9rem; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 10px;">已发布公告列表</h4>
+                    <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+                        <table>
+                            <tbody id="ann-tbody"><tr><td style="text-align:center;">加载中...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card" id="employee-card">
+                    <div class="card-header"><h3>👥 员工权限授权</h3></div>
+                    <div class="input-group">
+                        <input type="text" id="emp-user" placeholder="设定账号">
+                        <input type="password" id="emp-pwd" placeholder="设定密码">
+                        <button onclick="addEmployee()" class="btn">➕ 授权</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header" style="border-bottom: none; padding-bottom: 0;">
+                <h3>📡 全局流水监控</h3>
+                <button onclick="fetchTasks()" class="btn" style="background:rgba(255,255,255,0.05); color:var(--text-muted); box-shadow:none; border:1px solid var(--border);">🔄 刷新数据</button>
+            </div>
+            <div class="stats-grid" id="stats-container"></div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 10%">任务ID</th>
+                            <th style="width: 12%">来源卡密</th>
+                            <th style="width: 18%">导入邮箱</th>
+                            <th style="width: 10%">溯源IP</th>
+                            <th style="width: 10%">上游状态</th>
+                            <th style="width: 20%">底层反馈</th>
+                            <th style="width: 10%">时间</th>
+                            <th style="width: 10%; text-align: center;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="task-tbody"><tr><td colspan="8" style="text-align:center;">加载中...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+
+    <script>
+        const API_BASE = '/api/admin';
+        const escapeHTML = (str) => { return str ? str.toString().replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag])) : ''; };
+        
+        let allCdkeys = []; 
+        let currentCdkeyViewMode = 'overview';
+        let allAnnouncements = [];
+        let currentEditAnnId = null;
+
+        var icons = Quill.import('ui/icons');
+        icons['undo'] = '<svg viewBox="0 0 18 18"><polygon class="ql-fill ql-outer" points="8 5 8 1 3 5 8 9 8 5"></polygon><path class="ql-stroke" d="M8,5H11.5A3.5,3.5,0,0,1,15,8.5v0A3.5,3.5,0,0,1,11.5,12H6"></path></svg>';
+        icons['redo'] = '<svg viewBox="0 0 18 18"><polygon class="ql-fill ql-outer" points="10 5 10 1 15 5 10 9 10 5"></polygon><path class="ql-stroke" d="M10,5H6.5A3.5,3.5,0,0,0,3,8.5v0A3.5,3.5,0,0,0,6.5,12H12"></path></svg>';
+
+        var quill = new Quill('#editor-container', {
+            theme: 'snow',
+            placeholder: '输入详细公告内容...',
+            modules: {
+                toolbar: {
+                    container: [
+                        [{ 'header': [1, 2, 3, 4, false] }],
+                        [{ 'font': [] }, { 'size': ['small', false, 'large', 'huge'] }],
+                        ['bold', 'italic', 'underline', 'strike'], 
+                        [{ 'color': [] }, { 'background': [] }],
+                        [{ 'align': [] }],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'list': 'check' }],
+                        [{ 'indent': '-1'}, { 'indent': '+1' }],
+                        ['blockquote', 'code-block'],
+                        ['link', 'image', 'video'],
+                        ['clean', 'undo', 'redo']
+                    ],
+                    handlers: {
+                        'undo': function() { this.quill.history.undo(); },
+                        'redo': function() { this.quill.history.redo(); }
+                    }
+                },
+                history: { delay: 1000, maxStack: 50, userOnly: true }
+            }
+        });
+
+        async function fetchJsonWithAuth(url, options = {}) {
+            const token = localStorage.getItem('admin_token');
+            if(!token) { window.location.href = 'login.html'; return null; }
+            options.headers = { ...options.headers, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+            try {
+                const res = await fetch(url, options);
+                if(res.status === 401 || res.status === 403) { showToast('权限不足或失效', 'error'); setTimeout(()=>window.location.href='login.html', 1500); return null; }
+                const data = await res.json().catch(() => null);
+                if (!res.ok) { return data || { success: false, message: `HTTP Error ${res.status}` }; }
+                return data;
+            } catch (error) {
+                console.error(`请求失败 [${url}]:`, error.message);
+                return { success: false, message: "网络或服务器异常" };
+            }
+        }
+
+        async function fetchCdkeys() {
+            const keys = await fetchJsonWithAuth(`${API_BASE}/cdkeys`);
+            if(!keys || keys.success === false) return;
+            allCdkeys = keys;
+            filterCdkeys(); 
+        }
+
+        function setCdkeyView(mode, btnElement) {
+            document.querySelectorAll('.cdkey-view-tab').forEach(b => b.classList.remove('active'));
+            btnElement.classList.add('active');
+            currentCdkeyViewMode = mode;
+            filterCdkeys();
+        }
+
+        function filterCdkeys() {
+            const keyword = document.getElementById('search-cdkey').value.trim().toLowerCase();
+            let filtered = allCdkeys;
+            if(keyword) {
+                filtered = allCdkeys.filter(k => k.cdkey.toLowerCase().includes(keyword));
+            }
+            renderCdkeys(filtered, keyword !== '');
+        }
+
+        function renderCdkeys(keys, isSearching = false) {
+            const container = document.getElementById('cdkey-container');
+            if(keys.length === 0) { 
+                container.innerHTML = '<div style="text-align:center; padding: 2rem; color:var(--text-muted); border: 1px solid var(--border); border-radius: 8px; background: rgba(0,0,0,0.15);">未找到匹配的卡密</div>'; 
+                return; 
+            }
+
+            if (currentCdkeyViewMode === 'overview') {
+                let htmlStr = `<table style="border: 1px solid var(--border); background: rgba(0,0,0,0.15); border-radius: 8px; overflow: hidden;"><thead><tr><th>卡密</th><th>总额度</th><th>已用</th><th style="text-align:center;">操作</th></tr></thead><tbody>`;
+                keys.forEach(k => {
+                    const uColor = k.current_usages >= k.max_usages ? '#fca5a5' : '#6ee7b7';
+                    htmlStr += `
+                    <tr>
+                        <td style="font-family:monospace; color:#a5b4fc; font-weight:600;">${escapeHTML(k.cdkey)}</td>
+                        <td>${k.max_usages}</td>
+                        <td><span style="color:${uColor};">${k.current_usages}</span></td>
+                        <td style="text-align:center; white-space:nowrap;">
+                            <button class="btn btn-success" style="padding:2px 8px; font-size:0.75rem; margin-right:5px;" onclick="addLocalQuota('${k.id}')">➕ 额度</button>
+                            <button class="btn btn-danger" style="padding:2px 8px; font-size:0.75rem;" onclick="deleteCdkey('${k.id}')">吊销</button>
+                        </td>
+                    </tr>`;
+                });
+                htmlStr += `</tbody></table>`;
+                container.innerHTML = htmlStr;
+            } else {
+                const groups = {};
+                keys.forEach(k => {
+                    const remain = k.max_usages - k.current_usages;
+                    const safeRemain = remain > 0 ? remain : 0;
+                    if (!groups[safeRemain]) groups[safeRemain] = [];
+                    groups[safeRemain].push(k);
+                });
+
+                const sortedKeys = Object.keys(groups).sort((a, b) => b - a);
+                let htmlStr = '';
+                
+                sortedKeys.forEach(remain => {
+                    const groupKeys = groups[remain];
+                    const openAttr = isSearching ? 'open' : '';
+                    
+                    htmlStr += `<details class="cdkey-group" ${openAttr}>
+                        <summary>
+                            <span style="font-size: 0.95rem;">🎟️ 剩余 <span style="color: #6ee7b7; font-weight: 900;">${remain}</span> 次</span>
+                            <div style="display:flex; align-items:center;">
+                                <span class="group-count-badge">共包含 ${groupKeys.length} 张</span>
+                                <button class="btn btn-danger" style="padding:2px 8px; font-size:0.75rem; margin-left:10px; box-shadow:none;" onclick="deleteCdkeyGroup(event, ${remain})">🗑️ 吊销此分类</button>
+                            </div>
+                        </summary>
+                        <div class="group-content table-responsive" style="margin: 0; border: none; border-radius: 0 0 8px 8px; max-height: none;">
+                            <table>
+                                <tbody>`;
+                    groupKeys.forEach(k => {
+                        const uColor = k.current_usages >= k.max_usages ? '#fca5a5' : '#6ee7b7';
+                        htmlStr += `
+                            <tr>
+                                <td style="font-family:monospace; color:#a5b4fc; font-weight:600; width: 45%;">${escapeHTML(k.cdkey)}</td>
+                                <td style="width: 15%; color: var(--text-muted); font-size: 0.8rem;">总: ${k.max_usages}</td>
+                                <td style="width: 15%; font-size: 0.8rem;">已用: <span style="color:${uColor};">${k.current_usages}</span></td>
+                                <td style="text-align:right; white-space:nowrap; width: 25%;">
+                                    <button class="btn btn-success" style="padding:2px 8px; font-size:0.75rem; margin-right:5px;" onclick="addLocalQuota('${k.id}')">➕</button>
+                                    <button class="btn btn-danger" style="padding:2px 8px; font-size:0.75rem;" onclick="deleteCdkey('${k.id}')">删</button>
+                                </td>
+                            </tr>`;
+                    });
+                    htmlStr += `    </tbody>
+                            </table>
+                        </div>
+                    </details>`;
+                });
+                container.innerHTML = htmlStr;
+            }
+        }
+
+        async function deleteCdkeyGroup(e, remain) {
+            e.preventDefault(); e.stopPropagation();
+            if(confirm(`⚠️ 警告：确定要一键吊销所有剩余 ${remain} 次的卡密吗？此操作不可逆！`)) {
+                const data = await fetchJsonWithAuth(`${API_BASE}/cdkeys/batch_delete`, { method: 'POST', body: JSON.stringify({ remaining: remain }) });
+                if (data && data.success) { showToast(data.message, 'success'); fetchCdkeys(); } else { showToast(data ? data.message : '吊销失败', 'error'); }
+            }
+        }
+
+        async function addCdkey(event) {
+            let cdkey = document.getElementById('new-cdkey').value.trim();
+            const max_usages = document.getElementById('new-usage').value;
+            const count = document.getElementById('new-count').value || 1;
+            if(!max_usages) return showToast('请输入额度', 'error');
+            if (count > 1) cdkey = '';
+
+            const btn = event.target;
+            btn.disabled = true; btn.innerText = '生成中...';
+            const data = await fetchJsonWithAuth(`${API_BASE}/cdkeys`, { method: 'POST', body: JSON.stringify({ cdkey, max_usages, count }) });
+            btn.disabled = false; btn.innerText = '✨ 生成发放';
+
+            if(data && data.success) { 
+                if (data.keys && data.keys.length > 0) {
+                    const keysText = data.keys.join('\n');
+                    try {
+                        await navigator.clipboard.writeText(keysText);
+                        showToast(`已生成并自动复制 ${data.keys.length} 张卡密！`, 'success');
+                    } catch(e) {
+                        const ta = document.createElement('textarea');
+                        ta.value = keysText; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+                        showToast(`已生成并自动复制 ${data.keys.length} 张卡密！`, 'success');
+                    }
+                } else { showToast(data.message, 'success'); }
+                document.getElementById('new-cdkey').value = '';
+                document.getElementById('search-cdkey').value = ''; 
+                fetchCdkeys(); 
+            } else { showToast(data ? data.message : '生成失败', 'error'); }
+        }
+
+        async function addLocalQuota(id) {
+            const amt = prompt('请输入要增加的可用额度数量：', '10');
+            if(!amt || isNaN(amt)) return;
+            const data = await fetchJsonWithAuth(`${API_BASE}/cdkeys/${id}/add_quota`, { method: 'POST', body: JSON.stringify({ amount: amt }) });
+            if(data && data.success) { showToast(data.message, 'success'); fetchCdkeys(); } else { showToast('增加失败', 'error'); }
+        }
+
+        async function deleteCdkey(id) {
+            if(confirm('⚠️ 确定要吊销此卡密吗？')) {
+                const data = await fetchJsonWithAuth(`${API_BASE}/cdkeys/${id}`, { method: 'DELETE' });
+                if (data && data.success) { showToast('已成功吊销', 'success'); fetchCdkeys(); }
+            }
+        }
+
+        async function fetchUpstream() {
+            const data = await fetchJsonWithAuth(`${API_BASE}/upstream`);
+            const tbody = document.getElementById('upstream-tbody');
+            if(!data || data.success === false) { tbody.innerHTML='<tr><td colspan="3" align="center" style="color:#ef4444;">后端未响应</td></tr>'; return; }
+            if(data.data.length === 0) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted);">暂无配置上游卡密</td></tr>'; }
+            else {
+                tbody.innerHTML = data.data.map(u => `
+                    <tr>
+                        <td style="font-family:monospace;">${escapeHTML(u.cdkey.substring(0,12))}...</td>
+                        <td>${u.is_active ? '<span class="badge success">激活中</span>' : '<span class="badge default">备用</span>'}</td>
+                        <td style="text-align:center; white-space:nowrap;">
+                            ${!u.is_active ? `<button class="btn btn-success" style="margin-right:5px;" onclick="setActiveUpstream('${u.id}')">切换激活</button>` : ''}
+                            <button class="btn btn-danger" onclick="deleteUpstream('${u.id}')">删除</button>
+                        </td>
+                    </tr>`).join('');
+            }
+            const balData = await fetchJsonWithAuth(`${API_BASE}/upstream/balance`);
+            if(balData && balData.success) {
+                document.getElementById('upstream-balance').innerText = `当前余额: ${balData.remaining_uses} 次`;
+                document.getElementById('upstream-balance').style.color = '#6ee7b7';
+            } else {
+                document.getElementById('upstream-balance').innerText = `余额获取失败: ${balData ? balData.message : '网络异常'}`;
+                document.getElementById('upstream-balance').style.color = '#fca5a5';
+            }
+        }
+
+        async function addUpstreamCdkey() {
+            const cdkey = document.getElementById('new-upstream-cdkey').value.trim();
+            if(!cdkey) return showToast('请输入卡密', 'error');
+            const data = await fetchJsonWithAuth(`${API_BASE}/upstream`, { method: 'POST', body: JSON.stringify({ cdkey }) });
+            if(data && data.success) { showToast(data.message, 'success'); document.getElementById('new-upstream-cdkey').value = ''; fetchUpstream(); } else { showToast(data ? data.message : '添加失败', 'error'); }
+        }
+        async function setActiveUpstream(id) { const data = await fetchJsonWithAuth(`${API_BASE}/upstream/${id}/active`, { method: 'PUT' }); if(data && data.success) { showToast(data.message, 'success'); fetchUpstream(); } }
+        async function deleteUpstream(id) { if(confirm('删除后系统将无法使用该上游卡密，确定吗？')) { const data = await fetchJsonWithAuth(`${API_BASE}/upstream/${id}`, { method: 'DELETE' }); if(data && data.success) { showToast(data.message, 'success'); fetchUpstream(); } } }
+
+        async function fetchAnnouncements() {
+            const data = await fetchJsonWithAuth(`${API_BASE}/announcements`);
+            const tbody = document.getElementById('ann-tbody');
+            if(!data || data.success === false) return;
+            
+            if(data.data.length === 0) { 
+                tbody.innerHTML = '<tr><td style="text-align:center; color:var(--text-muted);">暂无发布公告</td></tr>'; 
+                allAnnouncements = [];
+                return; 
+            }
+            
+            allAnnouncements = data.data; 
+            
+            tbody.innerHTML = allAnnouncements.map(n => `
+                <tr>
+                    <td>
+                        <div style="font-weight:bold; color:#fff; display:flex; justify-content:space-between; align-items:center;">
+                            <span>[${n.type === 'danger' ? '红' : (n.type === 'warning' ? '黄' : '蓝')}] ${escapeHTML(n.title)}</span>
+                            <div>
+                                <button class="btn btn-success" style="padding: 4px 8px; font-size: 0.75rem; box-shadow:none; margin-right: 5px;" onclick="editAnnouncement('${n.id}')">✏️ 编辑</button>
+                                <button class="btn btn-danger" style="padding: 4px 8px; font-size: 0.75rem; box-shadow:none;" onclick="deleteAnnouncement('${n.id}')">🗑️ 删除</button>
+                            </div>
+                        </div>
+                    </td>
+                </tr>`).join('');
+        }
+
+        function editAnnouncement(id) {
+            const ann = allAnnouncements.find(a => a.id == id);
+            if(!ann) return;
+            currentEditAnnId = id; 
+            document.getElementById('ann-type').value = ann.type;
+            document.getElementById('ann-title').value = ann.title;
+            quill.root.innerHTML = ann.content; 
+            
+            const pubBtn = document.getElementById('btn-publish-ann');
+            pubBtn.innerText = '💾 保存修改';
+            pubBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)'; 
+            document.getElementById('btn-cancel-ann').style.display = 'block'; 
+            document.getElementById('ann-management-card').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function cancelEditAnn() {
+            currentEditAnnId = null;
+            document.getElementById('ann-title').value = '';
+            quill.setContents([]);
+            document.getElementById('ann-type').value = 'warning';
+            
+            const pubBtn = document.getElementById('btn-publish-ann');
+            pubBtn.innerText = '🚀 立即发布';
+            pubBtn.style.background = ''; 
+            document.getElementById('btn-cancel-ann').style.display = 'none';
+        }
+
+        async function publishAnnouncement(e) {
+            const type = document.getElementById('ann-type').value;
+            const title = document.getElementById('ann-title').value.trim();
+            const content = quill.root.innerHTML;
+            
+            if(!title || quill.getText().trim().length === 0) return showToast('请填写标题和内容', 'error');
+            
+            const btn = e.target; 
+            btn.disabled = true; 
+            btn.innerText = '处理中...';
+            
+            let url = `${API_BASE}/announcements`;
+            let method = 'POST';
+            if (currentEditAnnId) {
+                url = `${API_BASE}/announcements/${currentEditAnnId}`;
+                method = 'PUT';
+            }
+
+            const data = await fetchJsonWithAuth(url, { method, body: JSON.stringify({ type, title, content }) });
+            btn.disabled = false; 
+            
+            if(data && data.success) { 
+                showToast(currentEditAnnId ? '🎉 公告修改成功！' : '🎉 公告发布成功！', 'success'); 
+                cancelEditAnn(); 
+                fetchAnnouncements(); 
+            } else { 
+                showToast(data ? data.message : '操作失败', 'error'); 
+                btn.innerText = currentEditAnnId ? '💾 保存修改' : '🚀 立即发布'; 
+            }
+        }
+        
+        async function deleteAnnouncement(id) { 
+            if(!confirm('确定要删除这条公告吗？C端用户将立即无法看到。')) return; 
+            const data = await fetchJsonWithAuth(`${API_BASE}/announcements/${id}`, { method: 'DELETE' }); 
+            if(data && data.success) { showToast(data.message, 'success'); fetchAnnouncements(); } 
+        }
+
+        async function fetchTasks() {
+            const data = await fetchJsonWithAuth(`${API_BASE}/tasks`);
+            if(!data || data.success === false) return;
+            const s = data.stats;
+            document.getElementById('stats-container').innerHTML = `
+                <div class="stat-card"><div class="stat-title">总流水单量</div><div class="stat-value val-total">${s.total || 0}</div></div>
+                <div class="stat-card"><div class="stat-title">排队运行中</div><div class="stat-value val-pending">${s.pending || 0}</div></div>
+                <div class="stat-card"><div class="stat-title">执行成功</div><div class="stat-value val-success">${s.success || 0}</div></div>
+                <div class="stat-card"><div class="stat-title">异常/失败</div><div class="stat-value val-danger">${s.failed || 0}</div></div>
+            `;
+            const tbody = document.getElementById('task-tbody');
+            if(data.accounts.length === 0) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">暂无流水</td></tr>'; return; }
+            tbody.innerHTML = data.accounts.map(t => {
+                let badgeClass = t.status === 'Success' ? 'success' : (t.status === 'Failed' ? 'failed' : 'pending');
+                let btnStyle = t.status === 'Failed' ? 'background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); cursor: pointer;' : 'background: rgba(255, 255, 255, 0.05); color: #64748b; border: 1px solid rgba(255, 255, 255, 0.05); cursor: not-allowed;';
+                let showId = (t.task_id && t.task_id !== 'unknown') ? t.task_id : '-';
+                return `<tr>
+                    <td style="font-family: monospace; color: #38bdf8; font-weight: bold;">${showId}</td>
+                    <td><span style="background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; font-family:monospace; font-size:0.8rem; color:#94a3b8;">${escapeHTML(t.cdkey)}</span></td>
+                    <td style="font-weight:500;">${escapeHTML(t.email)}</td>
+                    <td style="color:var(--text-muted); font-size:0.8rem;">${escapeHTML(t.client_ip)}</td>
+                    <td><span class="badge ${badgeClass}">${t.status}</span></td>
+                    <td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text-muted);" title="${escapeHTML(t.message)}">${escapeHTML(t.message || 'N/A')}</td>
+                    <td style="color:var(--text-muted); font-size:0.8rem;">${t.completed_at || '-'}</td>
+                    <td style="text-align: center;"><button class="btn" style="padding: 4px 10px; font-size: 0.8rem; margin: 0 auto; box-shadow: none; ${btnStyle}" ${t.status === 'Failed' ? `onclick="rerunAdminTask(${t.id})"` : 'disabled'}>🔄 强制重试</button></td>
+                </tr>`;
+            }).join('');
+        }
+
+        async function rerunAdminTask(id) { if(!confirm('确认强制重试该任务吗？')) return; const data = await fetchJsonWithAuth(`${API_BASE}/rerun`, { method: 'POST', body: JSON.stringify({ id }) }); if(data && data.success) { showToast(data.message, 'success'); fetchTasks(); } else { showToast(data ? data.message : '重试失败', 'error'); } }
+        async function addEmployee() { const u = document.getElementById('emp-user').value.trim(), p = document.getElementById('emp-pwd').value.trim(); if(!u || !p) return showToast('请输入', 'error'); const data = await fetchJsonWithAuth(`${API_BASE}/employees`, { method: 'POST', body: JSON.stringify({ username:u, password:p }) }); if(data && data.success) { showToast('授权成功', 'success'); document.getElementById('emp-user').value=''; document.getElementById('emp-pwd').value='';} else { showToast(data ? data.message : '授权失败', 'error'); } }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container'); const toast = document.createElement('div');
+            let bgColor = type === 'success' ? 'rgba(16, 185, 129, 0.95)' : (type === 'error' ? 'rgba(239, 68, 68, 0.95)' : 'rgba(99, 102, 241, 0.95)');
+            let icon = type === 'success' ? '✅' : (type === 'error' ? '❌' : 'ℹ️');
+            toast.style.cssText = `background:${bgColor}; color:white; padding:12px 20px; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.3); display:flex; align-items:center; gap:10px; font-weight:500; backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.15); margin-bottom:10px; animation: slideIn 0.3s ease forwards;`;
+            toast.innerHTML = `<span style="font-size:1.2rem;">${icon}</span> <span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateX(120%)'; setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        function logout() { localStorage.removeItem('admin_token'); window.location.href = 'login.html'; }
+        if(localStorage.getItem('admin_role') === '1') { document.getElementById('upstream-card').style.display = 'none'; document.getElementById('employee-card').style.display = 'none'; document.getElementById('ann-management-card').style.display = 'none'; }
+
+        fetchCdkeys(); fetchUpstream(); fetchAnnouncements(); fetchTasks();
+    </script>
+</body>
+</html>
