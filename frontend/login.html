@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>控制中心 - 安全登录</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+       .login-box { background: #1e293b; padding: 40px; border-radius: 12px; width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        h2 { margin-top: 0; text-align: center; color: #6366f1; }
+        input { width: 100%; padding: 12px; margin: 10px 0 20px 0; border: 1px solid #334155; background: #0f172a; color: #fff; border-radius: 6px; box-sizing: border-box; outline: none; }
+        input:focus { border-color: #6366f1; }
+        button { width: 100%; padding: 12px; background: #6366f1; border: none; color: white; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.3s; }
+        button:hover { background: #4f46e5; }
+       .error { color: #ef4444; font-size: 0.9em; text-align: center; display: none; margin-bottom: 10px;}
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h2>🛠️ 内部控制系统</h2>
+        <div id="error-msg" class="error"></div>
+        <input type="text" id="username" placeholder="管理员或员工账号">
+        <input type="password" id="password" placeholder="系统密码">
+        <button onclick="doLogin()" id="loginBtn">安全登录</button>
+    </div>
+
+    <script>
+        async function doLogin() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const errorMsg = document.getElementById('error-msg');
+            const loginBtn = document.getElementById('loginBtn');
+            
+            // 每次点击清空报错
+            errorMsg.style.display = 'none';
+
+            if (!username || !password) {
+                errorMsg.style.color = '#ef4444';
+                errorMsg.innerText = '账号和密码不能为空';
+                errorMsg.style.display = 'block';
+                return;
+            }
+            
+            // 按钮变成登录中，防止用户狂点
+            loginBtn.innerText = '登录中...';
+            loginBtn.disabled = true;
+
+            try {
+                const res = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    // 【修复核心】：同时保存 admin_token 和 token，确保前后端逻辑全部兼容
+                    localStorage.setItem('admin_token', data.token);
+                    localStorage.setItem('token', data.token); 
+                    localStorage.setItem('admin_role', data.role);
+                    
+                    errorMsg.style.color = '#22c55e'; // 成功时显示绿字
+                    errorMsg.innerText = '登录成功，正在进入系统...';
+                    errorMsg.style.display = 'block';
+                    
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 500);
+                } else {
+                    errorMsg.style.color = '#ef4444';
+                    errorMsg.innerText = data.message || '登录失败';
+                    errorMsg.style.display = 'block';
+                    
+                    // 恢复按钮状态
+                    loginBtn.innerText = '安全登录';
+                    loginBtn.disabled = false;
+                }
+            } catch (err) {
+                errorMsg.style.color = '#ef4444';
+                errorMsg.innerText = '网络连接异常';
+                errorMsg.style.display = 'block';
+                
+                loginBtn.innerText = '安全登录';
+                loginBtn.disabled = false;
+            }
+        }
+
+        // 添加回车键直接登录的快捷功能
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                doLogin();
+            }
+        });
+    </script>
+</body>
+</html>
