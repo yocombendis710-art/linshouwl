@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>控制中心 - 安全登录</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+       .login-box { background: #1e293b; padding: 40px; border-radius: 12px; width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        h2 { margin-top: 0; text-align: center; color: #6366f1; }
+        input { width: 100%; padding: 12px; margin: 10px 0 20px 0; border: 1px solid #334155; background: #0f172a; color: #fff; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #6366f1; border: none; color: white; border-radius: 6px; font-weight: bold; cursor: pointer; }
+       .error { color: #ef4444; font-size: 0.9em; text-align: center; display: none; margin-bottom: 10px;}
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h2>🛠️ 内部控制系统</h2>
+        <div id="error-msg" class="error"></div>
+        <input type="text" id="username" placeholder="管理员或员工账号">
+        <input type="password" id="password" placeholder="系统密码">
+        <button onclick="doLogin()">安全登录</button>
+    </div>
+
+    <script>
+        async function doLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+            
+            try {
+                const res = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    localStorage.setItem('admin_token', data.token);
+                    localStorage.setItem('admin_role', data.role); // 存储角色，前端限制视图
+                    window.location.href = 'dashboard.html';
+                } else {
+                    errorMsg.innerText = data.message || '登录失败';
+                    errorMsg.style.display = 'block';
+                }
+            } catch (err) {
+                errorMsg.innerText = '网络连接异常';
+                errorMsg.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
