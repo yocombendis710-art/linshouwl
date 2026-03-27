@@ -55,7 +55,6 @@ router.get('/tasks', verifyToken, async (req, res) => {
     } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
-// ==== 代理卡密管理 ====
 router.get('/cdkeys', verifyToken, async (req, res) => {
     const [rows] = await pool.query('SELECT * FROM local_cdkeys ORDER BY created_at DESC');
     res.json(rows);
@@ -66,6 +65,7 @@ router.post('/cdkeys', verifyToken, async (req, res) => {
     try {
         const generateCount = parseInt(count) || 1;
         let generatedKeys = [];
+        
         if (generateCount > 1 || !cdkey) {
             for (let i = 0; i < generateCount; i++) {
                 const randomKey = 'K-' + Math.random().toString(36).substring(2, 10).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -98,10 +98,11 @@ router.post('/cdkeys/batch_delete', verifyToken, async (req, res) => {
     try {
         const [result] = await pool.query('DELETE FROM local_cdkeys WHERE (max_usages - current_usages) = ?', [parseInt(remaining)]);
         res.json({ success: true, message: `已成功吊销 ${result.affectedRows} 张卡密` });
-    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
 });
 
-// ==== 上游卡密池管理 ====
 router.get('/upstream', verifyToken, async (req, res) => {
     const [rows] = await pool.query('SELECT * FROM upstream_cdkeys ORDER BY id DESC');
     res.json({ success: true, data: rows });
@@ -129,7 +130,6 @@ router.delete('/upstream/:id', verifyToken, async (req, res) => {
     res.json({ success: true, message: '已删除上游卡密' });
 });
 
-// ==== 公告管理 (新增修改接口) ====
 router.get('/announcements', verifyToken, async (req, res) => {
     const [rows] = await pool.query('SELECT * FROM announcements ORDER BY created_at DESC');
     res.json({ success: true, data: rows });
@@ -141,7 +141,6 @@ router.post('/announcements', verifyToken, async (req, res) => {
         res.json({ success: true, message: '公告发布成功' });
     } catch (error) { res.status(500).json({ success: false, message: error.message }); }
 });
-// 修改公告接口
 router.put('/announcements/:id', verifyToken, async (req, res) => {
     const { type, title, content } = req.body;
     try {
@@ -156,7 +155,6 @@ router.delete('/announcements/:id', verifyToken, async (req, res) => {
     } catch (error) { res.status(500).json({ success: false, message: error.message }); }
 });
 
-// ==== 员工管理与重试 ====
 router.post('/employees', verifyToken, requireSuperAdmin, async (req, res) => {
     const { username, password } = req.body;
     const hash = await bcrypt.hash(password, 10);
@@ -174,13 +172,15 @@ router.post('/rerun', verifyToken, async (req, res) => {
         const [rows] = await connection.query('SELECT * FROM import_tasks WHERE id = ? FOR UPDATE', [id]);
         if (rows.length === 0) throw new Error('任务不存在');
         const task = rows[0];
+
         if (task.status !== 'Failed') throw new Error('只能重试失败的任务');
         
         const upRes = await upstreamAPI.rerunTask(task.upstream_task_id);
+
         if (upRes.success) {
-            await connection.query('UPDATE import_tasks SET status = ?, upstream_message = ?, updated_at = NOW() WHERE id = ?', ['Running', '管理员强制免流重试中...', task.id]);
+            await connection.query('UPDATE import_tasks SET status = ?, upstream_message = ?, updated_at = NOW() WHERE id = ?', ['Running', '管理员强制重试中...', task.id]);
             await connection.commit();
-            res.json({ success: true, message: '强制免流重试指令已发送' });
+            res.json({ success: true, message: '强制重试指令已发送' });
         } else {
             await connection.commit();
             res.json({ success: false, message: upRes.message || '上游强制重试失败' });

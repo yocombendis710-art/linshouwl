@@ -118,6 +118,69 @@ router.post('/rerun', verifyClientCdkey, apiLimiter, async (req, res) => {
     } catch (error) { await connection.rollback(); res.status(500).json({ success: false, message: error.message }); } finally { connection.release(); }
 });
 
+router.post('/tasks/cancel', verifyClientCdkey, apiLimiter, async (req, res) => {
+    const { id } = req.body; 
+    const keyData = req.cdkeyData;
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+        const [rows] = await connection.query('SELECT * FROM import_tasks WHERE id = ? AND local_cdkey_id = ? FOR UPDATE', [id, keyData.id]);
+        if (rows.length === 0) throw new Error('任务不存在或无权操作');
+        const task = rows[0];
+
+        if (task.status !== 'Pending') throw new Error('只能取消排队中的任务');
+
+        const upRes = await upstreamAPI.cancelTask(task.upstream_task_id);
+
+        if (upRes.success) {
+            await connection.query('UPDATE import_tasks SET status = ?, upstream_message = ?, updated_at = NOW() WHERE id = ?', ['Stopped', '已手动取消排队', task.id]);
+            const refundCost = task.task_type === 'extract' ? 0.5 : 1;
+            await connection.query('UPDATE local_cdkeys SET current_usages = current_usages - ? WHERE id = ?', [refundCost, keyData.id]);
+            await connection.commit();
+            res.json({ success: true, message: '任务已取消并成功退还额度' });
+        } else {
+            await connection.commit();
+            res.json({ success: false, message: upRes.message || '上游取消排队失败' });
+        }
+    } catch (error) { await connection.rollback(); res.status(500).json({ success: false, message: error.message }); } finally { connection.release(); }
+});
+
+router.post('/tasks/modify', verifyClientCdkey, apiLimiter, async (req, res) => {
+    const { id, password, twofa } = req.body; 
+    const keyData = req.cdkeyData;
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+        const [rows] = await connection.query('SELECT * FROM import_tasks WHERE id = ? AND local_cdkey_id = ? FOR UPDATE', [id, keyData.id]);
+        if (rows.length === 0) throw new Error('任务不存在或无权操作');
+        const task = rows[0];
+
+        if (task.status !== 'Failed') throw new Error('只能修改失败/异常的任务');
+
+        const cost = task.task_type === 'extract' ? 0.5 : 1;
+        if (keyData.current_usages + cost > keyData.max_usages) throw new Error('当前余额不足，无法重新排队');
+
+        await connection.query('UPDATE local_cdkeys SET current_usages = current_usages + ? WHERE id = ?', [cost, keyData.id]);
+
+        const upRes = await upstreamAPI.submitTask(task.email, password, twofa, task.task_type);
+
+        if (upRes.success) {
+            const upstreamTaskId = upRes.task_id || (upRes.data && upRes.data.task_id) || 'unknown';
+            const encPwd = Buffer.from(password).toString('base64');
+            await connection.query(
+                'UPDATE import_tasks SET upstream_task_id = ?, status = ?, upstream_message = ?, password_encrypted = ?, twofa_secret = ?, updated_at = NOW() WHERE id = ?', 
+                [upstreamTaskId, 'Running', '已修改信息，重新排队中...', encPwd, twofa, task.id]
+            );
+            await connection.commit();
+            res.json({ success: true, message: '修改成功，已开始重新排队运行' });
+        } else {
+            await connection.query('UPDATE local_cdkeys SET current_usages = current_usages - ? WHERE id = ?', [cost, keyData.id]);
+            await connection.commit();
+            res.json({ success: false, message: upRes.message || '上游重新排队失败' });
+        }
+    } catch (error) { await connection.rollback(); res.status(500).json({ success: false, message: error.message }); } finally { connection.release(); }
+});
+
 router.post('/tasks/clear', verifyClientCdkey, async (req, res) => {
     const { status } = req.body;
     if (!['Success', 'Failed'].includes(status)) return res.status(400).json({ success: false, message: '参数错误' });
